@@ -24,8 +24,8 @@ int main(int argc, char **argv)
     desc.SampleDesc.Quality = 0;
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.CPUAccessFlags = 0;
-    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
-    desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+    desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
     hr = device->CreateTexture2D(&desc, NULL, &texture);
   }
   printf("texture %x %p\n", hr, texture);
@@ -49,6 +49,11 @@ int main(int argc, char **argv)
   HANDLE shareHandle;
   IDXGIResource* otherResource(NULL);
   hr = texture->QueryInterface( __uuidof(IDXGIResource), (void**)&otherResource );
+  IDXGIKeyedMutex* keyedMutex(NULL);
+  hr = texture->QueryInterface( __uuidof(IDXGIKeyedMutex), (void**)&keyedMutex);
+  printf("%x %p\n", hr, keyedMutex);
+  keyedMutex->AcquireSync(0, INFINITE);
+
   hr = otherResource->GetSharedHandle(&shareHandle);
   printf("%x %p\n", hr, shareHandle);
 
@@ -61,20 +66,34 @@ int main(int argc, char **argv)
   printf("%x %p\n", hr, rtView);
   FLOAT clearColor[4] = {0.5, 0, 0.5, 0.5};
   context->ClearRenderTargetView(rtView, clearColor);
+  context->Flush();
+  keyedMutex->ReleaseSync(0);
 
   ID3D11Resource *sharedResource;
   ID3D11Texture2D *sharedTexture;
+  IDXGIKeyedMutex *sharedMutex;
   hr = device->OpenSharedResource(shareHandle, __uuidof(ID3D11Resource), (void**)(&sharedResource));
 
   sharedResource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)(&sharedTexture));
+  sharedResource->QueryInterface(__uuidof(IDXGIKeyedMutex), (void**)(&sharedMutex));
   printf("OpenShared %x %p %p\n", hr, sharedResource, sharedTexture);
-  context->CopyResource(textureCPU, texture);
+  /*context->CopyResource(textureCPU, texture);
   {
     D3D11_MAPPED_SUBRESOURCE mapped;
     hr = context->Map(textureCPU, 0, D3D11_MAP_READ, 0, &mapped);
     printf("%x %p\n", hr, mapped.pData);
     printf("color %x\n", *(int*)mapped.pData);
-  }
+  }*/
+  sharedMutex->AcquireSync(0, INFINITE);
+
+  ID3D11ShaderResourceView *sharedView;
+  D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
+  viewDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+  viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+  viewDesc.Texture2D.MipLevels = 1;
+  viewDesc.Texture2D.MostDetailedMip = 0;
+  hr = device->CreateShaderResourceView(sharedTexture, &viewDesc, &sharedView);
+  printf("CreateShaderResource hr: %x\n", hr);
   context->CopyResource(textureCPU, sharedTexture);
   {
     D3D11_MAPPED_SUBRESOURCE mapped;
@@ -82,6 +101,7 @@ int main(int argc, char **argv)
     printf("%x %p\n", hr, mapped.pData);
     printf("color %x\n", *(int*)mapped.pData);
   }
+  sharedMutex->ReleaseSync(0);
 
 
   otherResource->Release();
