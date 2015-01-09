@@ -63,6 +63,8 @@ static void doCrash(ID3D11Device *device, ID3D11DeviceContext *deviceContext)
     deviceContext->Unmap(cpuTexture, 0);
     cpuTexture->Release();
 
+    // XXX on some drivers resultColor will not have changed to
+    // match the clear
     printf("%x\n", resultColor);
     if (resultColor != 0xffffff00) {
         *(char*)0 = 6;
