@@ -3,8 +3,7 @@
 #include <atlbase.h>
 
 
-// See bug 1083071. On some drivers, Direct3D 11 CreateShaderResourceView fails
-// with E_OUTOFMEMORY.
+// This crashes on Intel drivers with at least version 8.15.10.2086
 bool DoesD3D11TextureSharingWorkInternal(ID3D11Device *device, ID3D11Device *otherDevice, DXGI_FORMAT format, UINT bindflags)
 {
 
