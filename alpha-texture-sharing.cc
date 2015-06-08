@@ -44,19 +44,6 @@ bool DoesD3D11TextureSharingWorkInternal(ID3D11Device *device, ID3D11Device *oth
             return false;
         }
 
-        if (FAILED(sharedResource->QueryInterface(&sharedTexture)))
-        {
-            return false;
-        }
-
-        CComPtr<ID3D11ShaderResourceView> sharedView;
-
-        // This if(FAILED()) is the one that actually fails on systems affected by bug 1083071.
-        if (FAILED(device->CreateShaderResourceView(sharedTexture, NULL, &sharedView))) {
-
-            return false;
-        }
-
 
     return true;
 }
@@ -69,14 +56,14 @@ bool DoesD3D11TextureSharingWorkInternal(ID3D11Device *device, ID3D11Device *oth
         ID3D11Device *device2;
         ID3D11DeviceContext *context;
         D3D_FEATURE_LEVEL level;
-        D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_DEBUG,
+        D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0,
             NULL, 0, D3D11_SDK_VERSION, &device,
             &level, &context);
-        D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_DEBUG,
+        D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0,
             NULL, 0, D3D11_SDK_VERSION, &device2,
             &level, &context);
 
-        if (!DoesD3D11TextureSharingWorkInternal(device, device2, DXGI_FORMAT_A8_UNORM, D3D11_BIND_SHADER_RESOURCE)) {
+        if (!DoesD3D11TextureSharingWorkInternal(device, device, DXGI_FORMAT_A8_UNORM, D3D11_BIND_SHADER_RESOURCE)) {
         }
         printf("Success!\n");
 
