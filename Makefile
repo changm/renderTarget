@@ -1,7 +1,7 @@
 CXX=cl
 CXXFLAGS=-Z7
 LDLIBS=d3d11.lib
-all: alpha-texture-sharing max-texture shared-surface release-sync-rendertarget firefox.exe
+all: texture-perf alpha-texture-sharing max-texture shared-surface release-sync-rendertarget firefox.exe
 
 max-texture:
 
