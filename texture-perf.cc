@@ -1,7 +1,10 @@
 #include <d3d11.h>
 #include <stdio.h>
 #define WIDTH 200
+
 int buf[WIDTH*200];
+
+double ticksToMS;
 int main(int argc, char **argv)
 {
   int size;
@@ -19,6 +22,11 @@ int main(int argc, char **argv)
   int size_low = 0;
   int trial_size;
   HRESULT result;
+      
+    LARGE_INTEGER freq;
+    QueryPerformanceFrequency(&freq);
+    printf("frequency %lld\n", freq.QuadPart);
+    ticksToMS = 1000.*1000./freq.QuadPart;
     trial_size = size;
     result = 0x800000;
     D3D11_TEXTURE2D_DESC desc;
@@ -41,7 +49,7 @@ int main(int argc, char **argv)
       result = device->CreateTexture2D(&desc, NULL, &texture);
       QueryPerformanceCounter(&after);
       LONGLONG time = after.QuadPart - before.QuadPart;
-      printf("%x naked time: %lld\n", result, time);
+      printf("%x naked time: %.1fus\n", result, time*ticksToMS);
     }
     {
       ID3D11Texture2D *texture;
@@ -55,7 +63,7 @@ int main(int argc, char **argv)
       result = device->CreateTexture2D(&desc, &data, &texture);
       QueryPerformanceCounter(&after);
       LONGLONG time = after.QuadPart - before.QuadPart;
-      printf("%x fill time: %lld\n", result, time);
+      printf("%x fill time: %.1fus\n", result, time*ticksToMS);
     }
     {
       ID3D11Texture2D *texture;
@@ -65,7 +73,7 @@ int main(int argc, char **argv)
       result = device->CreateTexture2D(&desc, NULL, &texture);
       QueryPerformanceCounter(&after);
       LONGLONG time = after.QuadPart - before.QuadPart;
-      printf("%x naked time: %lld\n", result, time);
+      printf("%x naked time: %.1fus\n", result, time*ticksToMS);
     }
     {
       ID3D11Texture2D *texture;
@@ -79,7 +87,7 @@ int main(int argc, char **argv)
       result = device->CreateTexture2D(&desc, &data, &texture);
       QueryPerformanceCounter(&after);
       LONGLONG time = after.QuadPart - before.QuadPart;
-      printf("%x fill time: %lld\n", result, time);
+      printf("%x fill time: %.1fus\n", result, time*ticksToMS);
     }
 
     {
@@ -90,7 +98,7 @@ int main(int argc, char **argv)
       result = device->CreateTexture2D(&desc, NULL, &texture2);
       QueryPerformanceCounter(&after);
       LONGLONG time = after.QuadPart - before.QuadPart;
-      printf("%x naked time: %lld\n", result, time);
+      printf("%x naked time: %.1fus\n", result, time*ticksToMS);
 
       desc.Usage = D3D11_USAGE_STAGING;
       desc.BindFlags = 0;
@@ -100,26 +108,33 @@ int main(int argc, char **argv)
       result = device->CreateTexture2D(&desc, NULL, &texture);
       QueryPerformanceCounter(&after);
       time = after.QuadPart - before.QuadPart;
-      printf("%x staging time: %lld\n", result, time);
+      printf("%x staging time: %.1fus\n", result, time*ticksToMS);
 
       QueryPerformanceCounter(&before);
       D3D11_MAPPED_SUBRESOURCE map;
       result = context->Map(texture, 0, D3D11_MAP_READ_WRITE, 0, &map);
       QueryPerformanceCounter(&after);
       time = after.QuadPart - before.QuadPart;
-      printf("%x staging map time: %lld\n", result, time);
+      printf("%x staging map time: %.1fus\n", result, time*ticksToMS);
+
+      QueryPerformanceCounter(&before);
+      memcpy(map.pData, buf, 200*WIDTH*4);
+      QueryPerformanceCounter(&after);
+      time = after.QuadPart - before.QuadPart;
+      printf("%x memcpy time: %.1fus\n", result, time*ticksToMS);
+
 
       QueryPerformanceCounter(&before);
       context->Unmap(texture, 0);
       QueryPerformanceCounter(&after);
       time = after.QuadPart - before.QuadPart;
-      printf("%x staging unmap time: %lld\n", result, time);
+      printf("%x staging unmap time: %.1fus\n", result, time*ticksToMS);
 
       QueryPerformanceCounter(&before);
       context->CopyResource(texture, texture2);
       QueryPerformanceCounter(&after);
       time = after.QuadPart - before.QuadPart;
-      printf("%x copy time: %lld\n", result, time);
+      printf("%x copy time: %.1fus\n", result, time*ticksToMS);
 
     }
 
