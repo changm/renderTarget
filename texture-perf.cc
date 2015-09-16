@@ -55,7 +55,8 @@ int main(int argc, char **argv)
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.CPUAccessFlags = 0;
     desc.MiscFlags = 0;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    //desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.BindFlags = D3D11_BIND_RENDER_TARGET;
     {
       ID3D11Texture2D *texture;
       LARGE_INTEGER before;
@@ -111,6 +112,8 @@ int main(int argc, char **argv)
       LARGE_INTEGER before;
       LARGE_INTEGER after;
       QueryPerformanceCounter(&before);
+
+      desc.BindFlags = D3D11_BIND_RENDER_TARGET; 
       result = device->CreateTexture2D(&desc, NULL, &destTexture);
       QueryPerformanceCounter(&after);
       LONGLONG time = after.QuadPart - before.QuadPart;
