@@ -1,5 +1,7 @@
 #include <d3d11.h>
 #include <stdio.h>
+#include <dxgi.h>
+#include <d2d1.h>
 #define WIDTH 200
 
 int buf[WIDTH*200];
@@ -104,12 +106,12 @@ int main(int argc, char **argv)
     }
 
     {
-      ID3D11Texture2D *texture2;
+      ID3D11Texture2D *destTexture;
       D3D11_MAPPED_SUBRESOURCE map;
       LARGE_INTEGER before;
       LARGE_INTEGER after;
       QueryPerformanceCounter(&before);
-      result = device->CreateTexture2D(&desc, NULL, &texture2);
+      result = device->CreateTexture2D(&desc, NULL, &destTexture);
       QueryPerformanceCounter(&after);
       LONGLONG time = after.QuadPart - before.QuadPart;
       printf("%x naked time: %.1fus\n", result, time*ticksToMS);
@@ -130,7 +132,7 @@ int main(int argc, char **argv)
       time = after.QuadPart - before.QuadPart;
       printf("%x staging map time: %.1fus\n", result, time*ticksToMS);
 
-      delupus(map.pData, 200*WIDTH*4);
+      //delupus(map.pData, 200*WIDTH*4);
       QueryPerformanceCounter(&before);
       memcpy(map.pData, buf, 200*WIDTH*4);
       QueryPerformanceCounter(&after);
@@ -145,7 +147,7 @@ int main(int argc, char **argv)
       printf("%x staging unmap time: %.1fus\n", result, time*ticksToMS);
 
       QueryPerformanceCounter(&before);
-      context->CopyResource(texture, texture2);
+      context->CopyResource(texture, destTexture);
       QueryPerformanceCounter(&after);
       time = after.QuadPart - before.QuadPart;
       printf("%x copy time: %.1fus\n", result, time*ticksToMS);
@@ -170,12 +172,43 @@ int main(int argc, char **argv)
       printf("%x staging unmap time: %.1fus\n", result, time*ticksToMS);
 
       QueryPerformanceCounter(&before);
-      context->CopyResource(texture, texture2);
+      context->CopyResource(destTexture, texture);
       QueryPerformanceCounter(&after);
       time = after.QuadPart - before.QuadPart;
       printf("%x copy time: %.1fus\n", result, time*ticksToMS);
 
+      // Try to create a shared bitmap
+      IDXGISurface1* surface;
+      ID2D1RenderTarget* renderTarget;
+      HRESULT hr;
+      hr = destTexture->QueryInterface(IID_IDXGISurface1, (void**)&surface);
+      if (hr != S_OK) {
+        printf("Could not query interface\n");
+      }
 
+      // Create a factory!
+      D2D1_ALPHA_MODE alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+      D2D1_RENDER_TARGET_PROPERTIES props
+        = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT,
+                                       D2D1::PixelFormat(desc.Format, alphaMode));
+      ID2D1Factory* factory;
+      D2D1_FACTORY_OPTIONS options;
+      hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED,
+                             __uuidof(ID2D1Factory),
+                             &options,
+                             (void**)&factory);
+      if (hr != S_OK) {
+        printf("Could not create factory\n");
+      }
+
+      // Create a render target
+      ID2D1RenderTarget* rt;
+      hr = factory->CreateDxgiSurfaceRenderTarget(surface, &props, &rt);
+      if (hr != S_OK) {
+        // Always fails with invalid arg
+        printf("Could not create a render target code: %x\n", hr);
+      }
+                             
     }
 
 
